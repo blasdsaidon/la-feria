@@ -151,8 +151,8 @@ function Login() {
   return (
     <Shell>
       <section className="login-panel">
-        <div className="brand-mark">LF</div>
-        <p className="eyebrow">Gestion de tienda</p>
+        <div className="brand-mark"><span>LA</span><strong>FERIA</strong></div>
+        <p className="eyebrow">Gestion de feria americana</p>
         <h1>La Feria</h1>
         <form onSubmit={submit} className="stack">
           <label>Email<input value={email} onChange={(event) => setEmail(event.target.value)} placeholder="dueno@correo.com" /></label>
@@ -174,11 +174,18 @@ function HomeView({ products, sales, payments, isOwner }) {
   const totalPaid = payments.reduce((sum, item) => sum + Number(item.amount), 0);
 
   return (
-    <div className="grid">
-      <Metric label="Disponibles" value={available.length} />
-      <Metric label="Vendidas" value={sold.length} />
-      <Metric label="Ventas" value={money(totalSales)} />
-      {isOwner && <Metric label="Pendiente prov." value={money(Math.max(0, totalPayout - totalPaid))} />}
+    <div className="stack">
+      <section className="home-summary">
+        <p className="eyebrow">Resumen</p>
+        <h2>{available.length} prendas disponibles</h2>
+        <span>{sold.length} vendidas - {money(totalSales)} en ventas</span>
+      </section>
+      <div className="grid">
+        <Metric label="Disponibles" value={available.length} />
+        <Metric label="Vendidas" value={sold.length} />
+        <Metric label="Ventas" value={money(totalSales)} />
+        {isOwner && <Metric label="Pendiente prov." value={money(Math.max(0, totalPayout - totalPaid))} />}
+      </div>
       <section className="card wide">
         <h2>Ultimas ventas</h2>
         <ListEmpty show={!activeSales.length} text="Todavia no hay ventas cargadas." />
@@ -344,10 +351,19 @@ function SellView({ customers, loadEverything, products, profile, setMessage, us
 }
 
 function PeopleView({ customers, providers, loadEverything, setMessage }) {
+  const [active, setActive] = useState("customers");
+
   return (
-    <div className="two-columns">
-      <PersonPanel table="customers" title="Clientes" people={customers} loadEverything={loadEverything} setMessage={setMessage} />
-      <PersonPanel table="providers" title="Proveedores" people={providers} loadEverything={loadEverything} setMessage={setMessage} />
+    <div className="stack">
+      <div className="tabs">
+        <button className={active === "customers" ? "active" : ""} onClick={() => setActive("customers")}>Clientes</button>
+        <button className={active === "providers" ? "active" : ""} onClick={() => setActive("providers")}>Proveedores</button>
+      </div>
+      {active === "customers" ? (
+        <PersonPanel table="customers" title="Clientes" people={customers} loadEverything={loadEverything} setMessage={setMessage} />
+      ) : (
+        <PersonPanel table="providers" title="Proveedores" people={providers} loadEverything={loadEverything} setMessage={setMessage} />
+      )}
     </div>
   );
 }
@@ -377,6 +393,9 @@ function PersonPanel({ table, title, people, loadEverything, setMessage }) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [instagram, setInstagram] = useState("");
+  const [query, setQuery] = useState("");
+  const [showForm, setShowForm] = useState(false);
+  const filtered = people.filter((person) => `${person.name} ${person.phone || ""} ${person.instagram || ""}`.toLowerCase().includes(query.toLowerCase()));
 
   async function addPerson(event) {
     event.preventDefault();
@@ -386,6 +405,7 @@ function PersonPanel({ table, title, people, loadEverything, setMessage }) {
       setName("");
       setPhone("");
       setInstagram("");
+      setShowForm(false);
       await loadEverything();
       setMessage("Contacto cargado.");
     }
@@ -393,16 +413,43 @@ function PersonPanel({ table, title, people, loadEverything, setMessage }) {
 
   return (
     <section className="card">
-      <h2>{title}</h2>
-      <form className="stack compact" onSubmit={addPerson}>
-        <input required value={name} onChange={(event) => setName(event.target.value)} placeholder="Nombre" />
-        <input value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="Telefono" />
-        <input value={instagram} onChange={(event) => setInstagram(event.target.value)} placeholder="Instagram" />
-        <button className="primary-button"><Plus size={16} /> Agregar</button>
-      </form>
-      <ListEmpty show={!people.length} text={`Sin ${title.toLowerCase()}.`} />
-      {people.map((person) => <div className="row" key={person.id}><div><strong>{person.name}</strong><span>{person.phone || person.instagram || "Sin contacto"}</span></div></div>)}
+      <div className="section-title">
+        <h2>{title}</h2>
+        <span>{people.length} cargados</span>
+      </div>
+      <div className="toolbar-line">
+        <div className="search">
+          <Search size={16} />
+          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`Buscar ${title.toLowerCase()}...`} />
+        </div>
+        <button className="square-action" onClick={() => setShowForm((value) => !value)} title={`Agregar ${title}`}>
+          <Plus size={19} />
+        </button>
+      </div>
+      {showForm && (
+        <form className="stack compact person-form" onSubmit={addPerson}>
+          <input required value={name} onChange={(event) => setName(event.target.value)} placeholder="Nombre" />
+          <input value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="Telefono" />
+          <input value={instagram} onChange={(event) => setInstagram(event.target.value)} placeholder="Instagram" />
+          <button className="primary-button"><Plus size={16} /> Agregar</button>
+        </form>
+      )}
+      <ListEmpty show={!filtered.length} text={`Sin ${title.toLowerCase()} para mostrar.`} />
+      {filtered.map((person) => <PersonRow key={person.id} person={person} />)}
     </section>
+  );
+}
+
+function PersonRow({ person }) {
+  const initial = person.name?.trim()?.charAt(0)?.toUpperCase() || "?";
+  return (
+    <div className="person-row">
+      <div className="avatar">{initial}</div>
+      <div>
+        <strong>{person.name}</strong>
+        <span>{person.phone || person.instagram || "Sin contacto"}</span>
+      </div>
+    </div>
   );
 }
 
