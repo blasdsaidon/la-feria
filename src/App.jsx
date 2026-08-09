@@ -250,10 +250,12 @@ function StockView({ categories, formToken, loadEverything, products, providers,
 
   async function saveProduct(event) {
     event.preventDefault();
+    const productForm = event.currentTarget;
+    const photoFile = productForm.photo.files[0];
     setSaving(true);
     setMessage("");
     try {
-      const photoUrl = await uploadPhoto(event.currentTarget.photo.files[0]);
+      const photoUrl = await uploadPhoto(photoFile);
       const provider = await resolveProvider(form, providers);
       const { error } = await supabase.from("products").insert({
         code: codeFor(form.category),
@@ -271,7 +273,7 @@ function StockView({ categories, formToken, loadEverything, products, providers,
       if (error) throw error;
       setForm(emptyProduct);
       setShowForm(false);
-      event.currentTarget.reset();
+      productForm.reset();
       await loadEverything();
       setMessage("Prenda cargada.");
     } catch (error) {
