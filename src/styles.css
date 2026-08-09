@@ -73,6 +73,9 @@ h2 {
   padding: 18px 18px 100px;
   background: var(--ink);
 }
+.app-shell.home-shell {
+  padding: 0 18px 100px;
+}
 .topbar {
   display: flex;
   align-items: center;
@@ -156,6 +159,90 @@ h2 {
 .home-summary span {
   color: var(--muted);
   font-size: 13px;
+}
+.home-screen {
+  width: 100%;
+  max-width: 390px;
+  margin: 0 auto;
+  padding-top: 40px;
+}
+.home-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+.home-header h1 {
+  font-size: 24px;
+  line-height: 1.05;
+}
+.home-header h1 span {
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
+}
+.home-header .icon-button {
+  width: 43px;
+  height: 43px;
+  flex: 0 0 43px;
+  border-color: rgba(237, 233, 224, 0.09);
+  background: var(--surface-2);
+}
+.home-rule {
+  height: 2px;
+  margin: 26px 0 28px;
+  background: var(--gold);
+}
+.quick-section > p {
+  margin: 0 0 18px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+}
+.quick-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 22px;
+}
+.quick-card {
+  position: relative;
+  min-height: 86px;
+  border: 0;
+  background: var(--gold);
+  color: var(--gold);
+  clip-path: polygon(18% 0, 96% 9%, 100% 20%, 98% 92%, 96% 100%, 17% 90%, 0 48%);
+  padding: 2px;
+}
+.quick-card-inner {
+  display: grid;
+  min-height: 82px;
+  place-items: center;
+  align-content: center;
+  gap: 8px;
+  background: var(--ink);
+  clip-path: polygon(18% 0, 96% 9%, 100% 20%, 98% 92%, 96% 100%, 17% 90%, 0 48%);
+  padding: 14px 18px 14px 28px;
+}
+.quick-card strong {
+  color: var(--cream);
+  font-family: "Space Grotesk", "IBM Plex Sans", sans-serif;
+  font-size: 14px;
+  line-height: 1.1;
+  text-align: center;
+}
+.tag-hole {
+  position: absolute;
+  top: 42%;
+  left: 14px;
+  z-index: 1;
+  width: 9px;
+  height: 9px;
+  border: 2px solid var(--gold);
+  border-radius: 999px;
+  background: var(--ink);
+}
+.quick-card:hover .quick-card-inner,
+.quick-card:focus-visible .quick-card-inner {
+  background: #202635;
 }
 .metric span {
   display: block;
@@ -463,5 +550,20 @@ h2 {
   .payment-row {
     grid-template-columns: 1fr;
     align-items: stretch;
+  }
+  .home-screen {
+    max-width: 360px;
+    padding-top: 38px;
+  }
+  .quick-grid {
+    gap: 13px 18px;
+  }
+  .quick-card {
+    min-height: 82px;
+  }
+  .quick-card-inner {
+    min-height: 78px;
+    padding-right: 12px;
+    padding-left: 25px;
   }
 }

@@ -34,6 +34,7 @@ export default function App() {
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
   const [view, setView] = useState("home");
+  const [stockFormToken, setStockFormToken] = useState(0);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [products, setProducts] = useState([]);
@@ -102,20 +103,25 @@ export default function App() {
   if (loading) return <Shell><div className="empty">Cargando...</div></Shell>;
   if (!session) return <Login />;
 
+  function openNewProduct() {
+    setStockFormToken(Date.now());
+    setView("stock");
+  }
+
   return (
-    <Shell>
-      <header className="topbar">
+    <Shell className={view === "home" ? "home-shell" : ""}>
+      {view !== "home" && <header className="topbar">
         <div>
           <p className="eyebrow">La Feria</p>
           <h1>{titleFor(view)}</h1>
         </div>
         <button className="icon-button" onClick={() => supabase.auth.signOut()} title="Salir"><LogOut size={18} /></button>
-      </header>
+      </header>}
 
       {message && <div className="notice">{message}</div>}
 
-      {view === "home" && <HomeView products={products} sales={sales} payments={payments} isOwner={isOwner} />}
-      {view === "stock" && <StockView categories={categories} loadEverything={loadEverything} products={products} providers={providers} setMessage={setMessage} user={user} />}
+      {view === "home" && <HomeView isOwner={isOwner} onLogout={() => supabase.auth.signOut()} openNewProduct={openNewProduct} profile={profile} setView={setView} />}
+      {view === "stock" && <StockView categories={categories} formToken={stockFormToken} loadEverything={loadEverything} products={products} providers={providers} setMessage={setMessage} user={user} />}
       {view === "sell" && <SellView customers={customers} loadEverything={loadEverything} products={products} profile={profile} setMessage={setMessage} user={user} />}
       {view === "history" && <HistoryView sales={sales} />}
       {view === "people" && <PeopleView customers={customers} loadEverything={loadEverything} providers={providers} setMessage={setMessage} />}
@@ -165,47 +171,56 @@ function Login() {
   );
 }
 
-function HomeView({ products, sales, payments, isOwner }) {
-  const available = products.filter((item) => item.status === "disponible");
-  const sold = products.filter((item) => item.status === "vendido");
-  const activeSales = sales.filter((sale) => !sale.cancelled);
-  const totalSales = activeSales.reduce((sum, sale) => sum + Number(sale.total), 0);
-  const totalPayout = sold.reduce((sum, item) => sum + Number(item.payout_price), 0);
-  const totalPaid = payments.reduce((sum, item) => sum + Number(item.amount), 0);
+function HomeView({ isOwner, onLogout, openNewProduct, profile, setView }) {
+  const firstName = (profile?.full_name || "Flor").split(" ")[0];
+  const quickLinks = [
+    { label: "Cargar item", icon: Plus, action: openNewProduct },
+    { label: "Vender", icon: ShoppingCart, action: () => setView("sell") },
+    { label: "Ver stock", icon: Boxes, action: () => setView("stock") },
+    { label: "Historial", icon: ReceiptText, action: () => setView("history") },
+    { label: "Personas", icon: Users, action: () => setView("people") },
+    ...(isOwner ? [{ label: "Finanzas", icon: DollarSign, action: () => setView("finance") }] : []),
+  ];
 
   return (
-    <div className="stack">
-      <section className="home-summary">
-        <p className="eyebrow">Resumen</p>
-        <h2>{available.length} prendas disponibles</h2>
-        <span>{sold.length} vendidas - {money(totalSales)} en ventas</span>
-      </section>
-      <div className="grid">
-        <Metric label="Disponibles" value={available.length} />
-        <Metric label="Vendidas" value={sold.length} />
-        <Metric label="Ventas" value={money(totalSales)} />
-        {isOwner && <Metric label="Pendiente prov." value={money(Math.max(0, totalPayout - totalPaid))} />}
-      </div>
-      <section className="card wide">
-        <h2>Ultimas ventas</h2>
-        <ListEmpty show={!activeSales.length} text="Todavia no hay ventas cargadas." />
-        {activeSales.slice(0, 5).map((sale) => (
-          <div className="row" key={sale.id}>
-            <div><strong>{sale.customer_name || "Venta sin cliente"}</strong><span>{new Date(sale.date).toLocaleDateString("es-AR")} - {sale.seller_name}</span></div>
-            <b>{money(sale.total)}</b>
-          </div>
-        ))}
+    <div className="home-screen">
+      <header className="home-header">
+        <h1>Hola, {firstName} <span>🌸</span></h1>
+        <button className="icon-button" onClick={onLogout} title="Salir"><LogOut size={18} /></button>
+      </header>
+      <div className="home-rule" />
+      <section className="quick-section">
+        <p>ACCESOS RÁPIDOS</p>
+        <div className="quick-grid">
+          {quickLinks.map((item) => <QuickCard key={item.label} {...item} />)}
+        </div>
       </section>
     </div>
   );
 }
 
-function StockView({ categories, loadEverything, products, providers, setMessage, user }) {
+function QuickCard({ action, icon: Icon, label }) {
+  return (
+    <button className="quick-card" onClick={action}>
+      <span className="tag-hole" />
+      <span className="quick-card-inner">
+        <Icon size={24} />
+        <strong>{label}</strong>
+      </span>
+    </button>
+  );
+}
+
+function StockView({ categories, formToken, loadEverything, products, providers, setMessage, user }) {
   const [query, setQuery] = useState("");
   const [form, setForm] = useState(emptyProduct);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const filtered = products.filter((item) => `${item.code} ${item.name} ${item.category} ${item.size} ${item.color}`.toLowerCase().includes(query.toLowerCase()));
+
+  useEffect(() => {
+    if (formToken) setShowForm(true);
+  }, [formToken]);
 
   async function uploadPhoto(file) {
     if (!file) return "";
@@ -508,8 +523,8 @@ function ListEmpty({ show, text }) {
   return show ? <div className="empty">{text}</div> : null;
 }
 
-function Shell({ children }) {
-  return <main className="app-shell">{children}</main>;
+function Shell({ children, className = "" }) {
+  return <main className={`app-shell ${className}`}>{children}</main>;
 }
 
 function titleFor(view) {
