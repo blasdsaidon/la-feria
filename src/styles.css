@@ -365,6 +365,7 @@ h2 {
   padding: 9px 10px;
   color: var(--cream);
   text-align: left;
+  cursor: pointer;
 }
 .product-row img, .photo-placeholder {
   grid-area: photo;
@@ -409,6 +410,111 @@ h2 {
   grid-area: action;
   width: 34px;
   height: 34px;
+}
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: end center;
+  background: rgba(10, 12, 18, 0.72);
+  padding: 18px;
+}
+.product-modal {
+  width: min(100%, 440px);
+  max-height: calc(100vh - 36px);
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 14px 14px 10px 10px;
+  background: var(--ink);
+  padding: 14px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.45);
+}
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.modal-header h2 {
+  margin: 0;
+  font-size: 18px;
+}
+.product-photo-large {
+  display: grid;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--chalk);
+}
+.product-photo-large img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.detail-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 12px 0;
+}
+.detail-list span {
+  display: grid;
+  gap: 4px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: rgba(45, 52, 70, 0.5);
+  padding: 9px 10px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.detail-list strong {
+  overflow: hidden;
+  color: var(--cream);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  text-transform: none;
+  white-space: nowrap;
+}
+.label-preview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  border: 1px solid var(--gold);
+  border-radius: 10px;
+  background: rgba(203, 165, 42, 0.08);
+  padding: 10px 12px;
+}
+.label-preview > div {
+  display: grid;
+  gap: 3px;
+  color: var(--gold);
+}
+.label-preview strong {
+  color: var(--cream);
+  font-family: "Space Grotesk", "IBM Plex Sans", sans-serif;
+  font-size: 15px;
+}
+.label-preview span {
+  color: var(--muted);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 12px;
+}
+.label-preview img {
+  width: 74px;
+  height: 74px;
+  border-radius: 6px;
+  background: #fff;
 }
 .select-row b, .history-row b {
   flex: 0 0 auto;

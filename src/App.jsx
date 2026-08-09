@@ -3,18 +3,25 @@ import {
   Boxes,
   DollarSign,
   Home,
+  Image as ImageIcon,
   LogOut,
   Plus,
+  Printer,
+  QrCode,
   ReceiptText,
   Search,
   ShoppingCart,
+  Tag,
   Trash2,
   Users,
+  X,
 } from "lucide-react";
+import QRCode from "qrcode";
 import { isSupabaseConfigured, supabase } from "./lib/supabase";
 
 const DEFAULT_CATEGORIES = ["Remeras", "Pantalones", "Camperas", "Vestidos", "Calzado", "Accesorios"];
-const emptyProduct = { name: "", category: "Remeras", size: "", color: "", payout_price: "", sale_price: "", provider_id: "" };
+const NEW_PROVIDER = "__new_provider__";
+const emptyProduct = { name: "", category: "Remeras", size: "", color: "", payout_price: "", sale_price: "", provider_id: "", provider_name: "" };
 
 const money = (value) =>
   new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(Number(value || 0));
@@ -225,6 +232,7 @@ function StockView({ categories, formToken, loadEverything, products, providers,
   const [form, setForm] = useState(emptyProduct);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
   const filtered = products.filter((item) => `${item.code} ${item.name} ${item.category} ${item.size} ${item.color}`.toLowerCase().includes(query.toLowerCase()));
 
   useEffect(() => {
@@ -246,7 +254,7 @@ function StockView({ categories, formToken, loadEverything, products, providers,
     setMessage("");
     try {
       const photoUrl = await uploadPhoto(event.currentTarget.photo.files[0]);
-      const provider = providers.find((item) => item.id === form.provider_id);
+      const provider = await resolveProvider(form, providers);
       const { error } = await supabase.from("products").insert({
         code: codeFor(form.category),
         name: form.name.trim(),
@@ -255,7 +263,7 @@ function StockView({ categories, formToken, loadEverything, products, providers,
         color: form.color.trim(),
         payout_price: Number(form.payout_price || 0),
         sale_price: Number(form.sale_price || 0),
-        provider_id: form.provider_id || null,
+        provider_id: provider?.id || null,
         provider_name: provider?.name || "",
         photo_url: photoUrl || null,
         status: "disponible",
@@ -297,7 +305,7 @@ function StockView({ categories, formToken, loadEverything, products, providers,
           </button>
         </div>
         <ListEmpty show={!filtered.length} text="No hay prendas para mostrar." />
-        {filtered.map((product) => <ProductRow key={product.id} product={product} onDelete={() => deleteProduct(product)} />)}
+        {filtered.map((product) => <ProductRow key={product.id} onOpen={() => setSelectedProduct(product)} product={product} onDelete={() => deleteProduct(product)} />)}
       </section>
 
       {showForm && <section className="card">
@@ -309,13 +317,30 @@ function StockView({ categories, formToken, loadEverything, products, providers,
           <label>Color<input value={form.color} onChange={(event) => setForm({ ...form, color: event.target.value })} /></label>
           <label>Pago proveedor<input type="number" value={form.payout_price} onChange={(event) => setForm({ ...form, payout_price: event.target.value })} /></label>
           <label>Precio venta<input type="number" required value={form.sale_price} onChange={(event) => setForm({ ...form, sale_price: event.target.value })} /></label>
-          <label>Proveedor<select value={form.provider_id} onChange={(event) => setForm({ ...form, provider_id: event.target.value })}><option value="">Sin proveedor</option>{providers.map((provider) => <option value={provider.id} key={provider.id}>{provider.name}</option>)}</select></label>
+          <label>Proveedor<select value={form.provider_id} onChange={(event) => setForm({ ...form, provider_id: event.target.value })}><option value="">Sin proveedor</option>{providers.map((provider) => <option value={provider.id} key={provider.id}>{provider.name}</option>)}<option value={NEW_PROVIDER}>Nuevo proveedor</option></select></label>
+          {form.provider_id === NEW_PROVIDER && <label>Nombre proveedor<input required value={form.provider_name} onChange={(event) => setForm({ ...form, provider_name: event.target.value })} placeholder="Nombre del proveedor" /></label>}
           <label>Foto<input name="photo" type="file" accept="image/*" /></label>
           <button className="primary-button full" disabled={saving}><Plus size={16} /> {saving ? "Guardando..." : "Cargar prenda"}</button>
         </form>
       </section>}
+
+      {selectedProduct && <ProductDetailModal product={selectedProduct} onClose={() => setSelectedProduct(null)} />}
     </div>
   );
+}
+
+async function resolveProvider(form, providers) {
+  if (!form.provider_id) return null;
+  if (form.provider_id !== NEW_PROVIDER) return providers.find((item) => item.id === form.provider_id) || null;
+
+  const name = form.provider_name.trim();
+  if (!name) return null;
+  const existing = providers.find((provider) => provider.name.trim().toLowerCase() === name.toLowerCase());
+  if (existing) return existing;
+
+  const { data, error } = await supabase.from("providers").insert({ name }).select().single();
+  if (error) throw error;
+  return data;
 }
 
 function SellView({ customers, loadEverything, products, profile, setMessage, user }) {
@@ -598,16 +623,146 @@ function PaymentRow({ provider, onPay }) {
   );
 }
 
-function ProductRow({ product, onDelete }) {
+function ProductRow({ product, onDelete, onOpen }) {
   return (
-    <div className="product-row">
+    <div className="product-row" onClick={onOpen} onKeyDown={(event) => event.key === "Enter" && onOpen()} role="button" tabIndex={0}>
       {product.photo_url ? <img src={product.photo_url} alt="" /> : <div className="photo-placeholder" />}
       <div><strong>{product.name}</strong><span>{product.code} - {product.category} - {product.size || "s/t"} - {product.color || "s/c"}</span></div>
       <b>{money(product.sale_price)}</b>
       <span className={`status ${product.status}`}>{product.status}</span>
-      <button className="icon-button subtle" onClick={onDelete} title="Borrar"><Trash2 size={16} /></button>
+      <button className="icon-button subtle" onClick={(event) => { event.stopPropagation(); onDelete(); }} title="Borrar"><Trash2 size={16} /></button>
     </div>
   );
+}
+
+function ProductDetailModal({ product, onClose }) {
+  const [qrDataUrl, setQrDataUrl] = useState("");
+  const qrPayload = product.code;
+
+  useEffect(() => {
+    let active = true;
+    QRCode.toDataURL(qrPayload, {
+      margin: 1,
+      width: 180,
+      color: { dark: "#1B1F2A", light: "#FFFFFF" },
+    }).then((url) => {
+      if (active) setQrDataUrl(url);
+    });
+    return () => { active = false; };
+  }, [qrPayload]);
+
+  return (
+    <div className="modal-backdrop">
+      <section className="product-modal">
+        <header className="modal-header">
+          <div>
+            <p className="eyebrow">{product.code}</p>
+            <h2>{product.name}</h2>
+          </div>
+          <button className="icon-button" onClick={onClose} title="Cerrar"><X size={18} /></button>
+        </header>
+
+        <div className="product-photo-large">
+          {product.photo_url ? <img src={product.photo_url} alt={product.name} /> : <ImageIcon size={42} />}
+        </div>
+
+        <div className="detail-list">
+          <span>Categoria <strong>{product.category}</strong></span>
+          <span>Talle <strong>{product.size || "s/t"}</strong></span>
+          <span>Color <strong>{product.color || "s/c"}</strong></span>
+          <span>Proveedor <strong>{product.provider_name || "Sin proveedor"}</strong></span>
+          <span>Pago prov. <strong>{money(product.payout_price)}</strong></span>
+          <span>Venta <strong>{money(product.sale_price)}</strong></span>
+        </div>
+
+        <div className="label-preview">
+          <div>
+            <Tag size={18} />
+            <strong>Etiqueta</strong>
+            <span>{product.code}</span>
+          </div>
+          {qrDataUrl ? <img src={qrDataUrl} alt="QR del producto" /> : <QrCode size={54} />}
+        </div>
+
+        <button className="primary-button" onClick={() => printLabel(product, qrDataUrl)} disabled={!qrDataUrl}>
+          <Printer size={16} /> Imprimir etiqueta
+        </button>
+      </section>
+    </div>
+  );
+}
+
+function printLabel(product, qrDataUrl) {
+  const printWindow = window.open("", "_blank", "width=420,height=520");
+  if (!printWindow) return;
+  printWindow.document.write(`
+    <!doctype html>
+    <html>
+      <head>
+        <title>Etiqueta ${product.code}</title>
+        <style>
+          @page { size: 58mm 38mm; margin: 3mm; }
+          * { box-sizing: border-box; }
+          body {
+            margin: 0;
+            color: #1B1F2A;
+            font-family: Arial, sans-serif;
+          }
+          .label {
+            width: 52mm;
+            height: 32mm;
+            border: 1px solid #1B1F2A;
+            display: grid;
+            grid-template-columns: 1fr 22mm;
+            gap: 2mm;
+            padding: 3mm;
+            align-items: center;
+          }
+          .brand {
+            font-size: 9px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+          }
+          .code {
+            margin-top: 2mm;
+            font-family: "Courier New", monospace;
+            font-size: 12px;
+            font-weight: 800;
+          }
+          .name {
+            margin-top: 1mm;
+            font-size: 10px;
+            font-weight: 700;
+          }
+          .price {
+            margin-top: 2mm;
+            font-size: 15px;
+            font-weight: 900;
+          }
+          img { width: 22mm; height: 22mm; }
+        </style>
+      </head>
+      <body>
+        <div class="label">
+          <div>
+            <div class="brand">LA FERIA</div>
+            <div class="code">${escapeHtml(product.code)}</div>
+            <div class="name">${escapeHtml(product.name)}</div>
+            <div class="price">${money(product.sale_price)}</div>
+          </div>
+          <img src="${qrDataUrl}" />
+        </div>
+        <script>
+          window.onload = () => { window.print(); window.close(); };
+        </script>
+      </body>
+    </html>
+  `);
+  printWindow.document.close();
+}
+
+function escapeHtml(value) {
+  return String(value || "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
 }
 
 function Metric({ label, value }) {
