@@ -117,6 +117,7 @@ export default function App() {
       {view === "home" && <HomeView products={products} sales={sales} payments={payments} isOwner={isOwner} />}
       {view === "stock" && <StockView categories={categories} loadEverything={loadEverything} products={products} providers={providers} setMessage={setMessage} user={user} />}
       {view === "sell" && <SellView customers={customers} loadEverything={loadEverything} products={products} profile={profile} setMessage={setMessage} user={user} />}
+      {view === "history" && <HistoryView sales={sales} />}
       {view === "people" && <PeopleView customers={customers} loadEverything={loadEverything} providers={providers} setMessage={setMessage} />}
       {view === "finance" && (isOwner ? <FinanceView loadEverything={loadEverything} payments={payments} products={products} providers={providers} setMessage={setMessage} /> : <div className="empty">Esta seccion es solo para el dueno.</div>)}
 
@@ -124,6 +125,7 @@ export default function App() {
         <NavButton active={view === "home"} icon={Home} label="Inicio" onClick={() => setView("home")} />
         <NavButton active={view === "stock"} icon={Boxes} label="Stock" onClick={() => setView("stock")} />
         <NavButton active={view === "sell"} icon={ShoppingCart} label="Vender" onClick={() => setView("sell")} />
+        <NavButton active={view === "history"} icon={ReceiptText} label="Historial" onClick={() => setView("history")} />
         <NavButton active={view === "people"} icon={Users} label="Personas" onClick={() => setView("people")} />
         {isOwner && <NavButton active={view === "finance"} icon={DollarSign} label="Finanzas" onClick={() => setView("finance")} />}
       </nav>
@@ -194,6 +196,7 @@ function HomeView({ products, sales, payments, isOwner }) {
 function StockView({ categories, loadEverything, products, providers, setMessage, user }) {
   const [query, setQuery] = useState("");
   const [form, setForm] = useState(emptyProduct);
+  const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const filtered = products.filter((item) => `${item.code} ${item.name} ${item.category} ${item.size} ${item.color}`.toLowerCase().includes(query.toLowerCase()));
 
@@ -228,6 +231,7 @@ function StockView({ categories, loadEverything, products, providers, setMessage
       });
       if (error) throw error;
       setForm(emptyProduct);
+      setShowForm(false);
       event.currentTarget.reset();
       await loadEverything();
       setMessage("Prenda cargada.");
@@ -248,6 +252,24 @@ function StockView({ categories, loadEverything, products, providers, setMessage
   return (
     <div className="stack">
       <section className="card">
+        <div className="section-title">
+          <h2>Stock</h2>
+          <span>{products.filter((item) => item.status === "disponible").length} disponibles</span>
+        </div>
+        <div className="toolbar-line">
+          <div className="search">
+            <Search size={16} />
+            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar prenda..." />
+          </div>
+          <button className="square-action" onClick={() => setShowForm((value) => !value)} title="Nueva prenda">
+            <Plus size={19} />
+          </button>
+        </div>
+        <ListEmpty show={!filtered.length} text="No hay prendas para mostrar." />
+        {filtered.map((product) => <ProductRow key={product.id} product={product} onDelete={() => deleteProduct(product)} />)}
+      </section>
+
+      {showForm && <section className="card">
         <h2>Nueva prenda</h2>
         <form className="form-grid" onSubmit={saveProduct}>
           <label>Nombre<input required value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></label>
@@ -260,14 +282,7 @@ function StockView({ categories, loadEverything, products, providers, setMessage
           <label>Foto<input name="photo" type="file" accept="image/*" /></label>
           <button className="primary-button full" disabled={saving}><Plus size={16} /> {saving ? "Guardando..." : "Cargar prenda"}</button>
         </form>
-      </section>
-
-      <section className="card">
-        <div className="section-title"><h2>Stock</h2><span>{products.filter((item) => item.status === "disponible").length} disponibles</span></div>
-        <div className="search"><Search size={16} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar prenda..." /></div>
-        <ListEmpty show={!filtered.length} text="No hay prendas para mostrar." />
-        {filtered.map((product) => <ProductRow key={product.id} product={product} onDelete={() => deleteProduct(product)} />)}
-      </section>
+      </section>}
     </div>
   );
 }
@@ -334,6 +349,27 @@ function PeopleView({ customers, providers, loadEverything, setMessage }) {
       <PersonPanel table="customers" title="Clientes" people={customers} loadEverything={loadEverything} setMessage={setMessage} />
       <PersonPanel table="providers" title="Proveedores" people={providers} loadEverything={loadEverything} setMessage={setMessage} />
     </div>
+  );
+}
+
+function HistoryView({ sales }) {
+  const activeSales = sales.filter((sale) => !sale.cancelled);
+
+  return (
+    <section className="card">
+      <h2>Historial de ventas</h2>
+      <ListEmpty show={!activeSales.length} text="Todavia no hay ventas cargadas." />
+      {activeSales.map((sale) => (
+        <div className="history-row" key={sale.id}>
+          <div>
+            <strong>{sale.customer_name || "Venta sin cliente"}</strong>
+            <span>{new Date(sale.date).toLocaleString("es-AR", { dateStyle: "short", timeStyle: "short" })}</span>
+            <small>{sale.seller_name}</small>
+          </div>
+          <b>{money(sale.total)}</b>
+        </div>
+      ))}
+    </section>
   );
 }
 
@@ -430,5 +466,5 @@ function Shell({ children }) {
 }
 
 function titleFor(view) {
-  return { home: "Inicio", stock: "Stock", sell: "Vender", people: "Personas", finance: "Finanzas" }[view];
+  return { home: "Inicio", stock: "Stock", sell: "Vender", history: "Historial", people: "Personas", finance: "Finanzas" }[view];
 }
