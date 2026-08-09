@@ -30,6 +30,15 @@ const codeFor = (category) => {
   return `${prefix}-${Date.now().toString().slice(-6)}`;
 };
 
+const isOwnerRole = (role) => {
+  const normalized = String(role || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  return ["owner", "dueno", "duena", "admin", "administrador", "administradora"].includes(normalized);
+};
+
 export default function App() {
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
@@ -45,7 +54,7 @@ export default function App() {
   const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
 
   const user = session?.user;
-  const isOwner = profile?.role === "owner";
+  const isOwner = isOwnerRole(profile?.role);
 
   useEffect(() => {
     if (!isSupabaseConfigured) {
