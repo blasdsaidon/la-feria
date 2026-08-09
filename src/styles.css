@@ -470,6 +470,117 @@ h2 {
   background: var(--gold);
   color: var(--ink);
 }
+.finance-screen {
+  width: 100%;
+  max-width: 390px;
+  margin: 0 auto;
+  padding-top: 24px;
+}
+.finance-header h1 {
+  font-size: 25px;
+}
+.finance-header .home-rule {
+  margin: 28px 0 18px;
+}
+.finance-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.finance-tabs button,
+.period-tabs button {
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 800;
+}
+.finance-tabs button.active,
+.period-tabs button.active {
+  border-color: var(--gold);
+  background: rgba(203, 165, 42, 0.08);
+  color: var(--gold);
+}
+.period-tabs {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.period-tabs button {
+  min-height: 38px;
+  font-size: 12px;
+}
+.finance-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.finance-card {
+  position: relative;
+  min-height: 84px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  padding: 18px 18px 14px 22px;
+}
+.finance-card.wide {
+  grid-column: 1 / -1;
+  min-height: 84px;
+  text-align: center;
+}
+.finance-card > span:not(.finance-hole) {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.finance-card strong {
+  display: block;
+  margin-top: 6px;
+  color: var(--cream);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 24px;
+  font-weight: 700;
+}
+.finance-card.success strong {
+  color: var(--green);
+}
+.finance-card.danger strong {
+  color: var(--red);
+}
+.finance-card em {
+  color: var(--green);
+  font-style: normal;
+}
+.finance-hole {
+  position: absolute;
+  top: 14px;
+  left: 13px;
+  width: 7px;
+  height: 7px;
+  border: 1px solid rgba(149, 160, 180, 0.22);
+  border-radius: 999px;
+  background: var(--ink);
+}
+.finance-history {
+  margin-top: 22px;
+}
+.finance-history > p {
+  margin: 0 0 14px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+.finance-providers {
+  display: grid;
+  gap: 8px;
+}
 .person-form {
   margin: 12px 0 4px;
 }
@@ -550,6 +661,17 @@ h2 {
   .payment-row {
     grid-template-columns: 1fr;
     align-items: stretch;
+  }
+  .finance-screen {
+    max-width: 360px;
+    padding-top: 24px;
+  }
+  .period-tabs {
+    gap: 6px;
+  }
+  .period-tabs button {
+    font-size: 11px;
+    padding: 0 4px;
   }
   .home-screen {
     max-width: 360px;

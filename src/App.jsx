@@ -110,7 +110,7 @@ export default function App() {
 
   return (
     <Shell className={view === "home" ? "home-shell" : ""}>
-      {view !== "home" && <header className="topbar">
+      {view !== "home" && view !== "finance" && <header className="topbar">
         <div>
           <p className="eyebrow">La Feria</p>
           <h1>{titleFor(view)}</h1>
@@ -125,7 +125,7 @@ export default function App() {
       {view === "sell" && <SellView customers={customers} loadEverything={loadEverything} products={products} profile={profile} setMessage={setMessage} user={user} />}
       {view === "history" && <HistoryView sales={sales} />}
       {view === "people" && <PeopleView customers={customers} loadEverything={loadEverything} providers={providers} setMessage={setMessage} />}
-      {view === "finance" && (isOwner ? <FinanceView loadEverything={loadEverything} payments={payments} products={products} providers={providers} setMessage={setMessage} /> : <div className="empty">Esta seccion es solo para el dueno.</div>)}
+      {view === "finance" && (isOwner ? <FinanceView loadEverything={loadEverything} payments={payments} products={products} providers={providers} sales={sales} setMessage={setMessage} /> : <div className="empty">Esta seccion es solo para el dueno.</div>)}
 
       <nav className="bottom-nav">
         <NavButton active={view === "home"} icon={Home} label="Inicio" onClick={() => setView("home")} />
@@ -468,12 +468,22 @@ function PersonRow({ person }) {
   );
 }
 
-function FinanceView({ products, providers, payments, loadEverything, setMessage }) {
+function FinanceView({ products, providers, payments, sales, loadEverything, setMessage }) {
+  const [tab, setTab] = useState("summary");
+  const [period, setPeriod] = useState("today");
   const balances = useMemo(() => providers.map((provider) => {
     const sold = products.filter((product) => product.provider_id === provider.id && product.status === "vendido").reduce((sum, product) => sum + Number(product.payout_price), 0);
     const paid = payments.filter((payment) => payment.provider_id === provider.id).reduce((sum, payment) => sum + Number(payment.amount), 0);
     return { ...provider, sold, paid, pending: Math.max(0, sold - paid) };
   }), [products, providers, payments]);
+  const filteredSales = useMemo(() => sales.filter((sale) => !sale.cancelled && isInPeriod(sale.date, period)), [sales, period]);
+  const soldTotal = filteredSales.reduce((sum, sale) => sum + Number(sale.total || 0), 0);
+  const providerTotal = filteredSales.reduce((sum, sale) => {
+    const items = sale.sale_items || [];
+    return sum + items.reduce((itemSum, item) => itemSum + Number(item.payout_price || 0), 0);
+  }, 0);
+  const profit = soldTotal - providerTotal;
+  const pendingTotal = balances.reduce((sum, provider) => sum + provider.pending, 0);
 
   async function pay(providerId, amount) {
     const { error } = await supabase.from("provider_payments").insert({ provider_id: providerId, amount: Number(amount) });
@@ -484,7 +494,87 @@ function FinanceView({ products, providers, payments, loadEverything, setMessage
     }
   }
 
-  return <section className="card"><h2>Pagos a proveedores</h2><ListEmpty show={!balances.length} text="No hay proveedores cargados." />{balances.map((provider) => <PaymentRow key={provider.id} provider={provider} onPay={pay} />)}</section>;
+  return (
+    <div className="finance-screen">
+      <header className="finance-header">
+        <h1>Finanzas</h1>
+        <div className="home-rule" />
+      </header>
+
+      <div className="finance-tabs">
+        <button className={tab === "summary" ? "active" : ""} onClick={() => setTab("summary")}>Resumen</button>
+        <button className={tab === "providers" ? "active" : ""} onClick={() => setTab("providers")}>Proveedores</button>
+      </div>
+
+      {tab === "summary" ? (
+        <section className="finance-summary">
+          <div className="period-tabs">
+            {[
+              ["today", "Hoy"],
+              ["week", "Semana"],
+              ["month", "Mes"],
+              ["year", "Año"],
+              ["all", "Todo"],
+            ].map(([id, label]) => <button key={id} className={period === id ? "active" : ""} onClick={() => setPeriod(id)}>{label}</button>)}
+          </div>
+
+          <div className="finance-grid">
+            <FinanceMetric label="Vendido" value={money(soldTotal)} />
+            <FinanceMetric label="A proveedores" value={money(providerTotal)} />
+            <FinanceMetric label="Ganancia" value={money(profit)} tone="success" wide prefix="↗" />
+            <FinanceMetric label="Pendiente de pago a proveedores (total)" value={money(pendingTotal)} tone="danger" wide />
+          </div>
+
+          <section className="finance-history">
+            <p>HISTORIAL ({filteredSales.length})</p>
+            <ListEmpty show={!filteredSales.length} text="No hay ventas registradas en este periodo." />
+            {filteredSales.map((sale) => (
+              <div className="history-row" key={sale.id}>
+                <div>
+                  <strong>{sale.customer_name || "Venta sin cliente"}</strong>
+                  <span>{new Date(sale.date).toLocaleDateString("es-AR")} - {sale.seller_name}</span>
+                </div>
+                <b>{money(sale.total)}</b>
+              </div>
+            ))}
+          </section>
+        </section>
+      ) : (
+        <section className="finance-providers">
+          <ListEmpty show={!balances.length} text="No hay proveedores cargados." />
+          {balances.map((provider) => <PaymentRow key={provider.id} provider={provider} onPay={pay} />)}
+        </section>
+      )}
+    </div>
+  );
+}
+
+function FinanceMetric({ label, prefix = "", tone = "", value, wide = false }) {
+  return (
+    <div className={`finance-card ${wide ? "wide" : ""} ${tone}`}>
+      <span className="finance-hole" />
+      <span>{label}</span>
+      <strong>{prefix && <em>{prefix}</em>} {value}</strong>
+    </div>
+  );
+}
+
+function isInPeriod(dateValue, period) {
+  if (period === "all") return true;
+  const date = new Date(dateValue);
+  const now = new Date();
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+  if (period === "week") {
+    const day = start.getDay();
+    start.setDate(start.getDate() - (day === 0 ? 6 : day - 1));
+  }
+  if (period === "month") start.setDate(1);
+  if (period === "year") {
+    start.setMonth(0);
+    start.setDate(1);
+  }
+  return date >= start;
 }
 
 function PaymentRow({ provider, onPay }) {
