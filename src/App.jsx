@@ -173,7 +173,7 @@ function Login() {
   return (
     <Shell>
       <section className="login-panel">
-        <div className="brand-mark"><span>LA</span><strong>FERIA</strong></div>
+        <img className="brand-logo" src="/la-feria-logo.png" alt="La Feria" />
         <p className="eyebrow">Gestion de feria americana</p>
         <h1>La Feria</h1>
         <form onSubmit={submit} className="stack">
@@ -201,7 +201,10 @@ function HomeView({ isOwner, onLogout, openNewProduct, profile, setView }) {
   return (
     <div className="home-screen">
       <header className="home-header">
-        <h1>Hola, {firstName} <span>🌸</span></h1>
+        <div className="home-brand">
+          <img src="/la-feria-logo.png" alt="La Feria" />
+          <h1>Hola, {firstName} <span>🌸</span></h1>
+        </div>
         <button className="icon-button" onClick={onLogout} title="Salir"><LogOut size={18} /></button>
       </header>
       <div className="home-rule" />
